@@ -125,7 +125,6 @@ export default function Footer() {
     );
   };
 
-  // 🔹 Social Links
   const socialLinks = {
     CSHR: {
       facebook: "https://www.facebook.com/careerschoolhrsolutions.homepage/",
@@ -139,7 +138,7 @@ export default function Footer() {
     CSIT: {
       facebook: "https://www.facebook.com/profile.php?id=61578868656121",
       instagram: "https://www.instagram.com/careerschoolitsolutions/?hl=en",
-      linkedin: "https://www.linkedin.com", // Placeholder since you said "v"
+      linkedin: "https://www.linkedin.com",
       youtube:
         "https://youtube.com/@careerschoolitsolutionsnellore?si=iNimoC_zvVUEWXnA",
       whatsapp: "https://whatsapp.com/channel/0029Va4ufgc17Emp80iBn92I",
@@ -148,9 +147,10 @@ export default function Footer() {
 
   return (
     <footer className="bg-white text-gray-800 py-8 sm:py-10 md:py-12 lg:py-14 xl:py-16 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
-      {/* 🔹 Top Section */}
+
       <div className="max-w-[1920px] mx-auto grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 md:gap-10 lg:gap-12 xl:gap-14 2xl:gap-16">
-        {/* 🔸 Trending Courses */}
+        
+        {/* TRENDING COURSES */}
         <div className="text-center xs:text-left">
           <h3 className="font-bold mb-3 sm:mb-4 text-base sm:text-lg md:text-xl xl:text-2xl text-[#004AAD]">
             TRENDING COURSE
@@ -180,18 +180,66 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* 🔸 Resources */}
+        {/* RESOURCES (Updated Referral Rewards Link) */}
         <div className="text-center xs:text-left">
           <h3 className="font-bold mb-3 sm:mb-4 text-base sm:text-lg md:text-xl xl:text-2xl text-[#004AAD]">
             RESOURCES
           </h3>
+          
           <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm md:text-base xl:text-lg">
+            <li>
+              <a
+                href="https://wa.me/6369119564"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#004AAD] transition duration-300"
+              >
+                Referral Rewards
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://wa.me/7305014818"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#004AAD] transition duration-300"
+              >
+                Hire students
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://wa.me/7708938866"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#004AAD] transition duration-300"
+              >
+                Work with us
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://wa.me/6369119564"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#004AAD] transition duration-300"
+              >
+                Become a Freelancer
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://wa.me/6369119564"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#004AAD] transition duration-300"
+              >
+                Connect with Training Team
+              </a>
+            </li>
+
             {[
-              "Referral Rewards",
-              "Hire Students",
-              "Work with us",
-              "Become a Mobilizer",
-              "Connect with Training Team",
+          
             ].map((item, i) => (
               <li key={i}>
                 <a
@@ -207,7 +255,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* 🔸 Placement */}
+        {/* PLACEMENT */}
         <div className="text-center xs:text-left">
           <h3 className="font-bold mb-3 sm:mb-4 text-base sm:text-lg md:text-xl xl:text-2xl text-[#004AAD]">
             PLACEMENT
@@ -223,27 +271,27 @@ export default function Footer() {
             </li>
             <li>
               <a
-                href={courseLink}
+                href="https://wa.me/7708938866"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[#004AAD] transition duration-300"
               >
-                Speak With Campus Team
+                Speak with campus Team
               </a>
             </li>
             <li>
               <a
-                href={courseLink}
+                href="https://wa.me/7305014818"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[#004AAD] transition duration-300"
               >
-                Speak With Placement Team
+                speak with placement Team
               </a>
             </li>
             <li>
               <a
-                href={courseLink}
+                href="https://wa.me/6382585438"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-[#004AAD] transition duration-300"
@@ -254,7 +302,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* 🔸 Company */}
+        {/* COMPANY */}
         <div className="text-center xs:text-left">
           <h3 className="font-bold mb-3 sm:mb-4 text-base sm:text-lg md:text-xl xl:text-2xl text-[#004AAD]">
             COMPANY
@@ -282,17 +330,18 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* 🔹 Divider */}
+      {/* Divider */}
       <div className="mt-12 border-t border-gray-300"></div>
 
-      {/* 🔹 OUR BRANCHES SECTION */}
+      {/* BRANCHES */}
       <div className="max-w-[1920px] mx-auto mt-12">
         <h3 className="text-center font-bold text-2xl sm:text-3xl xl:text-4xl text-[#004AAD] mb-10">
           OUR BRANCHES
         </h3>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* CSIT Branch */}
+          
+          {/* CSIT BRANCH */}
           <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 flex flex-col items-center">
             <div className="relative w-full h-56 mb-4 rounded-lg overflow-hidden">
               <iframe
@@ -313,7 +362,7 @@ export default function Footer() {
             </div>
 
             <img
-              src="/Footer Logo/CSIT - Footer Logo.png"
+              src="/Footer Logo/New CSIT Logo (TM).png"
               alt="CSIT Logo"
               className="h-14 w-auto mb-3 object-contain"
             />
@@ -326,7 +375,6 @@ export default function Footer() {
               College, Aditya Nagar, Nellore, Andhra Pradesh 524002
             </p>
 
-            {/* 🔹 Social Links for CSIT */}
             <div className="flex justify-center gap-4">
               <a
                 href={socialLinks.CSIT.instagram}
@@ -371,7 +419,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* CSHR Branch */}
+          {/* CSHR BRANCH */}
           <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 flex flex-col items-center">
             <div className="relative w-full h-56 mb-4 rounded-lg overflow-hidden">
               <iframe
@@ -392,7 +440,7 @@ export default function Footer() {
             </div>
 
             <img
-              src="/Footer Logo/CSHR - Footer Logo.png"
+              src="/Footer Logo/New CSHR Logo (TM).png"
               alt="CSHR Logo"
               className="h-14 w-auto mb-3 object-contain"
             />
@@ -405,7 +453,6 @@ export default function Footer() {
               Nadu 600032
             </p>
 
-            {/* 🔹 Social Links for CSHR */}
             <div className="flex justify-center gap-4">
               <a
                 href={socialLinks.CSHR.instagram}
@@ -452,18 +499,14 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* 🔹 Divider */}
+      {/* Divider */}
       <div className="mt-12 border-t border-gray-300"></div>
 
-      {/* 🔹 Bottom Section */}
+      {/* COPYRIGHT + POLICIES */}
       <div className="text-center mt-6">
         <p className="text-gray-600 text-sm md:text-base">
-<<<<<<< HEAD
-          © {new Date().getFullYear()} Career School HR & IT Solutions — All Rights Reserved.
-=======
           © {new Date().getFullYear()} Careerschool HR & IT Solutions — All
           Rights Reserved.
->>>>>>> ade9c637d0cc8f0945bb5367053a2809113e9434
         </p>
 
         <div className="flex flex-col items-center mt-4 text-gray-600 text-xs sm:text-sm md:text-base">

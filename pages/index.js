@@ -9,10 +9,14 @@ import Courses from "../components/Courses";
 import Alumni from "../components/Alumni";
 import NeedHelp from "../components/NeedHelp";
 import Footer from "../components/Footer";
+import Chatbot from "../components/chatbot";
+import Popupform from "../components/Popup form";
 
 export default function Home() {
   return (
     <main>
+      <Popupform/>
+      <Chatbot/>
       <HeroBanner />
       <Header />
       <FullImage />

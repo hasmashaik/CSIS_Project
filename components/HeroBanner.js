@@ -7,7 +7,7 @@ export default function HeroBanner() {
   return (
     <section className="relative overflow-hidden bg-[#f9ca1b] py-1 sm:py-2">
       <div className="relative flex items-center justify-end w-full px-4 sm:px-6">
-        {/* 🟡 Enroll Button (fixed right) */}
+        
         <a
           href={enrollLink}
           target="_blank"
@@ -27,10 +27,10 @@ export default function HeroBanner() {
           {/* Duplicate content for smooth infinite loop */}
           <div className="marquee-track text-sm sm:text-lg md:text-xl xl:text-2xl font-bold text-black">
             <span>
-              PYTHON with AI Training - Batch Starts Soon! • PYTHON with AI Training - Batch Starts Soon! • PYTHON with AI Training - Batch Starts Soon! • PYTHON with AI Training - Batch Starts Soon! •
+              NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today • NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today • NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today• NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today •
             </span>
             <span>
-              PYTHON with AI Training - Batch Starts Soon! • PYTHON with AI Training - Batch Starts Soon! • PYTHON with AI Training - Batch Starts Soon! • PYTHON with AI Training - Batch Starts Soon! •
+              NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today •NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today •NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today • NEW BATCH ALERT! Java • Python Full Stack + AI • Data Analytics — Join Today •
             </span>
           </div>
         </div>

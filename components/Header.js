@@ -28,23 +28,30 @@ export default function Header() {
     if (section) section.scrollIntoView({ behavior: "smooth" });
   };
 
-  // ✅ When logo clicked
+  // ✅ Full Refresh When Clicking Logo
   const handleLogoClick = () => {
-    router.push("/"); // navigate to homepage
-    setHighlightArrow(true); // highlight arrow
-    setTimeout(() => setHighlightArrow(false), 2000); // remove highlight after 2s
+    window.location.reload(); // 🔥 REFRESH THE WEBSITE
   };
 
   return (
     <header className="flex items-center justify-between px-6 py-4 bg-white shadow relative">
+      
       {/* 🔹 Clickable Logo */}
       <div
-        className="flex items-center gap-2 cursor-pointer"
+        className="flex items-center gap-4 cursor-pointer"
         onClick={handleLogoClick}
       >
+        {/* First Logo */}
         <img
           src="/Footer Logo/New CSHR Logo (TM).png"
-          alt="Logo"
+          alt=" HR Logo"
+          className="h-10 w-auto transition-transform hover:scale-105"
+        />
+
+        {/* Second Logo */}
+        <img
+          src="/Footer Logo/New CSIT Logo (TM).png"
+          alt="IT Logo"
           className="h-10 w-auto transition-transform hover:scale-105"
         />
       </div>
