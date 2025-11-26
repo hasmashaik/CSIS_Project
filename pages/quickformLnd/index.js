@@ -28,7 +28,7 @@ export default function QuickFormLogin() {
       localStorage.setItem('currentUser', JSON.stringify(userData));
       
       // Redirect to quickform details page
-      router.push('/quickformInd/quickformdetails');
+      router.push('/quickformLnd/quickformdetails');
     } else {
       setError('Invalid username or password');
     }
@@ -40,7 +40,7 @@ export default function QuickFormLogin() {
       {/* Your existing login form JSX */}
       <div className="login-card">
         <div className="login-header">
-          <h1>QuickForm Training</h1>
+          <h1>QuickForm Details</h1>
           <p>Transform Your Career with Professional IT Training</p>
         </div>
 
@@ -81,16 +81,10 @@ export default function QuickFormLogin() {
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
-
-          <div className="demo-credentials">
-            <p><strong>Demo Credentials:</strong></p>
-            <p>Username: careerschoolit</p>
-            <p>Password: careerschoolit@1</p>
-          </div>
         </div>
 
         <div className="login-footer">
-          <p>Secure Admin Access</p>
+          <p> @Admin Access</p>
         </div>
       </div>
 

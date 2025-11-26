@@ -1,3 +1,5 @@
-node_modules
+note pad 
 .next/
+node_modules/
 *.map
+.env.local
