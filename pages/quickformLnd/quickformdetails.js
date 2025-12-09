@@ -8,11 +8,14 @@ export default function QuickFormDetails() {
   const [loading, setLoading] = useState(true);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [editComment, setEditComment] = useState('');
+  const [error, setError] = useState('');
   const router = useRouter();
+  
+  const employees = ['Arshad', 'Christy', 'Uma', 'Sai', 'Keerithika', 'anu'];
 
   useEffect(() => {
-    const userData = localStorage.getItem('currentUser');
-    if (!userData) {
+    const userData = localStorage.getItem('adminAuthenticated');
+    if (!userData || userData !== 'true') {
       router.push('/quickformLnd');
       return;
     }
@@ -20,14 +23,21 @@ export default function QuickFormDetails() {
   }, [router]);
 
   const fetchEnquiries = async () => {
+    setLoading(true);
+    setError('');
     try {
       const response = await fetch('/api/quickform');
-      if (response.ok) {
-        const data = await response.json();
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      const data = await response.json();
+      if (Array.isArray(data)) {
         setEnquiries(data);
+        if (data.length === 0) setError('⚠️ No enquiries found.');
+      } else {
+        setError('Invalid data format');
       }
     } catch (error) {
       console.error('Error:', error);
+      setError(`Failed to load: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -35,17 +45,14 @@ export default function QuickFormDetails() {
 
   const fetchEnquiriesWithSearch = async () => {
     try {
-      const url = searchTerm 
-        ? `/api/quickform?search=${encodeURIComponent(searchTerm)}`
-        : '/api/quickform';
-      
+      const url = searchTerm ? `/api/quickform?search=${encodeURIComponent(searchTerm)}` : '/api/quickform';
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setEnquiries(data);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Search error:', error);
     }
   };
 
@@ -58,19 +65,20 @@ export default function QuickFormDetails() {
     try {
       const response = await fetch(`/api/quickform?id=${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
       
       if (response.ok) {
-        setEnquiries(enquiries.map(enquiry => 
-          enquiry.id === id ? { ...enquiry, status: newStatus } : enquiry
-        ));
-        
-        if (selectedEnquiry && selectedEnquiry.id === id) {
-          setSelectedEnquiry({...selectedEnquiry, status: newStatus});
+        const result = await response.json();
+        if (result.data) {
+          setEnquiries(enquiries.map(enquiry => 
+            enquiry.id === id ? { ...enquiry, status: newStatus, ...result.data } : enquiry
+          ));
+          
+          if (selectedEnquiry && selectedEnquiry.id === id) {
+            setSelectedEnquiry({...selectedEnquiry, status: newStatus, ...result.data});
+          }
         }
       }
     } catch (error) {
@@ -78,55 +86,74 @@ export default function QuickFormDetails() {
     }
   };
 
-  const handleCommentUpdate = async (id) => {
-    if (!editComment.trim()) return;
-    
+  const handleEmployeeAssign = async (id, employeeName) => {
     try {
       const response = await fetch(`/api/quickform?id=${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigned_to: employeeName }),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Assignment response:', result);
+        
+        if (result.data) {
+          setEnquiries(enquiries.map(enquiry => 
+            enquiry.id === id ? { ...enquiry, assigned_to: employeeName, ...result.data } : enquiry
+          ));
+          
+          if (selectedEnquiry && selectedEnquiry.id === id) {
+            setSelectedEnquiry({...selectedEnquiry, assigned_to: employeeName, ...result.data});
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error assigning employee:', error);
+    }
+  };
+
+  const handleCommentUpdate = async (id) => {
+    if (!editComment.trim()) return;
+    try {
+      const response = await fetch(`/api/quickform?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment: editComment }),
       });
       
       if (response.ok) {
-        setEnquiries(enquiries.map(enquiry => 
-          enquiry.id === id ? { ...enquiry, comment: editComment } : enquiry
-        ));
-        
-        if (selectedEnquiry && selectedEnquiry.id === id) {
-          setSelectedEnquiry({...selectedEnquiry, comment: editComment});
+        const result = await response.json();
+        if (result.data) {
+          setEnquiries(enquiries.map(enquiry => 
+            enquiry.id === id ? { ...enquiry, comment: editComment, ...result.data } : enquiry
+          ));
+          
+          if (selectedEnquiry && selectedEnquiry.id === id) {
+            setSelectedEnquiry({...selectedEnquiry, comment: editComment, ...result.data});
+          }
         }
         
         setEditComment('');
-        alert('Comment updated successfully!');
+        alert('✅ Comment updated!');
       }
     } catch (error) {
       console.error('Error updating comment:', error);
-      alert('Failed to update comment');
+      alert('❌ Failed to update comment');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this enquiry? This action cannot be undone!')) return;
-    
+    if (!confirm('Delete this enquiry?')) return;
     try {
       const response = await fetch(`/api/quickform?id=${id}`, { method: 'DELETE' });
       if (response.ok) {
         setEnquiries(enquiries.filter(enquiry => enquiry.id !== id));
-        if (selectedEnquiry && selectedEnquiry.id === id) {
-          closeDetails();
-        }
+        if (selectedEnquiry && selectedEnquiry.id === id) closeDetails();
       }
     } catch (error) {
-      console.error('Error deleting enquiry:', error);
+      console.error('Error deleting:', error);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    router.push('/quickformLnd');
   };
 
   const viewEnquiryDetails = (enquiry) => {
@@ -158,824 +185,552 @@ export default function QuickFormDetails() {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
-  const extractEnquiryType = (comment) => {
-    if (!comment) return 'Training';
-    if (comment.includes('Enquiry Type: Jobs')) return 'Jobs';
-    if (comment.includes('Enquiry Type: Courses / Internship')) return 'Training';
-    if (comment.includes('Job:')) return 'Jobs';
-    return 'Training';
+  const getEnquiryTypeDisplay = (enquiry) => {
+    if (enquiry.enquiry_type === 'IT / Non-IT Jobs') {
+      return { text: 'Jobs', color: 'green' };
+    } else if (enquiry.enquiry_type === 'Courses / Internship') {
+      return { text: 'Training', color: 'blue' };
+    }
+    
+    if (enquiry.comment) {
+      if (enquiry.comment.includes('IT / Non-IT Jobs') || 
+          enquiry.comment.includes('Enquiry Type: Jobs')) {
+        return { text: 'Jobs', color: 'green' };
+      } else if (enquiry.comment.includes('Courses / Internship')) {
+        return { text: 'Training', color: 'blue' };
+      }
+    }
+    
+    return { text: 'N/A', color: 'gray' };
+  };
+
+  const exportEnquiryDetails = () => {
+    if (!selectedEnquiry) return;
+    
+    const enquiryType = getEnquiryTypeDisplay(selectedEnquiry);
+    
+    const content = `
+╔══════════════════════════════════════════╗
+║       ENQUIRY DETAILS - ID #${selectedEnquiry.id}       ║
+╚══════════════════════════════════════════╝
+
+📅 SUBMITTED: ${formatDate(selectedEnquiry.created_at)}
+📋 ENQUIRY FOR: ${selectedEnquiry.enquiry_type || enquiryType.text}
+
+👤 PERSONAL INFORMATION
+══════════════════════════════════════════
+• Full Name: ${selectedEnquiry.full_name}
+• Phone: ${selectedEnquiry.country_code || '+91'} ${selectedEnquiry.phone}
+• Email: ${selectedEnquiry.email}
+${selectedEnquiry.current_employer ? `• Current Employer: ${selectedEnquiry.current_employer}` : ''}
+
+🎯 ENQUIRY DETAILS
+══════════════════════════════════════════
+• Course/Role: ${selectedEnquiry.course || 'N/A'}
+${selectedEnquiry.preferred_role ? `• Preferred Role: ${selectedEnquiry.preferred_role}` : ''}
+• Experience: ${selectedEnquiry.experience || 'N/A'}
+• Branch: ${selectedEnquiry.branch || 'N/A'}
+
+📍 LOCATION
+══════════════════════════════════════════
+• City: ${selectedEnquiry.city || 'N/A'}
+• State: ${selectedEnquiry.state || 'N/A'}
+
+📊 STATUS & ASSIGNMENT
+══════════════════════════════════════════
+• Status: ${selectedEnquiry.status || 'Pending'}
+• Assigned To: ${selectedEnquiry.assigned_to || 'Not assigned yet'}
+
+💬 COMMENTS / NOTES
+══════════════════════════════════════════
+${selectedEnquiry.comment || 'No comments provided.'}
+
+${editComment && editComment !== selectedEnquiry.comment ? `\n📝 UPDATED COMMENT:\n${editComment}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Generated: ${new Date().toLocaleString()}
+© Career School Admin System
+    `;
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `enquiry_${selectedEnquiry.id}_${selectedEnquiry.full_name.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert(`✅ Exported: ${a.download}`);
   };
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <div style={{ 
-          background: 'white', 
-          padding: '40px', 
-          borderRadius: '10px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ color: '#333', marginBottom: '20px' }}>Loading Enquiries...</h2>
-          <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #007bff',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto'
-          }}></div>
+      <div className="p-6">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Loading Enquiries...</h2>
+          <p className="text-gray-500">Fetching data from database</p>
         </div>
-        <style jsx>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa',
-      padding: '20px',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      {/* Details Modal */}
-      {selectedEnquiry && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '10px',
-            padding: '30px',
-            maxWidth: '700px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 5px 30px rgba(0,0,0,0.3)'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-              borderBottom: '2px solid #eee',
-              paddingBottom: '15px'
-            }}>
-              <div>
-                <h2 style={{ margin: 0, color: '#2c3e50', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  Enquiry Details
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    backgroundColor: extractEnquiryType(selectedEnquiry.comment) === 'Jobs' ? '#e8f5e9' : '#e3f2fd',
-                    color: extractEnquiryType(selectedEnquiry.comment) === 'Jobs' ? '#2e7d32' : '#1565c0'
-                  }}>
-                    {extractEnquiryType(selectedEnquiry.comment)}
-                  </span>
-                </h2>
-                <p style={{ margin: '5px 0 0 0', color: '#7f8c8d', fontSize: '14px' }}>
-                  ID: {selectedEnquiry.id} • Submitted: {formatDate(selectedEnquiry.created_at)}
-                </p>
-              </div>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="text-red-600 mr-3">⚠️</div>
+            <div>
+              <p className="font-medium text-red-800">{error}</p>
               <button 
-                onClick={closeDetails}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#7f8c8d',
-                  padding: '5px'
-                }}
+                onClick={fetchEnquiries}
+                className="mt-2 px-3 py-1 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
               >
-                ✕
+                Retry
               </button>
-            </div>
-            
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '15px',
-              marginBottom: '25px'
-            }}>
-              <div style={{ gridColumn: 'span 2', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
-                <strong style={{ display: 'block', marginBottom: '5px' }}>Full Name:</strong>
-                <span>{selectedEnquiry.full_name}</span>
-              </div>
-              
-              <div>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Contact:</strong>
-                <div>📞 {selectedEnquiry.country_code || '+91'} {selectedEnquiry.phone}</div>
-                <div>✉️ {selectedEnquiry.email}</div>
-              </div>
-              
-              <div>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Location:</strong>
-                <div>📍 {selectedEnquiry.city || selectedEnquiry.location || 'N/A'}</div>
-                <div>🏛️ {selectedEnquiry.state || 'N/A'}</div>
-              </div>
-              
-              <div>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Experience:</strong>
-                <span>{selectedEnquiry.experience || 'N/A'}</span>
-              </div>
-              
-              <div>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Training Mode:</strong>
-                <span>{selectedEnquiry.branch || 'N/A'}</span>
-              </div>
-              
-              <div style={{ gridColumn: 'span 2' }}>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Course / Job Role:</strong>
-                <span style={{ 
-                  padding: '8px 12px', 
-                  backgroundColor: '#e9ecef', 
-                  borderRadius: '5px',
-                  display: 'inline-block',
-                  fontWeight: '500'
-                }}>
-                  {selectedEnquiry.course || 'N/A'}
-                </span>
-              </div>
-              
-              <div style={{ gridColumn: 'span 2' }}>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Status:</strong>
-                <select
-                  value={selectedEnquiry.status || 'Pending'}
-                  onChange={(e) => {
-                    handleStatusChange(selectedEnquiry.id, e.target.value);
-                    setSelectedEnquiry({...selectedEnquiry, status: e.target.value});
-                  }}
-                  style={{
-                    padding: '8px 15px',
-                    border: '1px solid #ddd',
-                    borderRadius: '5px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    backgroundColor: getStatusColor(selectedEnquiry.status),
-                    color: getStatusTextColor(selectedEnquiry.status),
-                    cursor: 'pointer',
-                    outline: 'none',
-                    width: '100%',
-                    maxWidth: '200px'
-                  }}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Contacted">Contacted</option>
-                  <option value="Ongoing">On Going</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Not Interested">Not Interested</option>
-                </select>
-              </div>
-              
-              <div style={{ gridColumn: 'span 2' }}>
-                <strong style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Comments:</strong>
-                <div style={{ 
-                  padding: '10px',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '5px',
-                  minHeight: '60px',
-                  marginBottom: '10px',
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  {selectedEnquiry.comment || 'No comments'}
-                </div>
-                
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                  <input
-                    type="text"
-                    value={editComment}
-                    onChange={(e) => setEditComment(e.target.value)}
-                    placeholder="Add or update comment..."
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      border: '1px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
-                    }}
-                  />
-                  <button
-                    onClick={() => handleCommentUpdate(selectedEnquiry.id)}
-                    disabled={!editComment.trim()}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: editComment.trim() ? '#3498db' : '#95a5a6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: editComment.trim() ? 'pointer' : 'not-allowed',
-                      fontSize: '14px'
-                    }}
-                  >
-                    Update Comment
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: '20px',
-              paddingTop: '20px',
-              borderTop: '1px solid #eee'
-            }}>
-              <div>
-                <button
-                  onClick={() => {
-                    const enquiryText = `
-Enquiry ID: ${selectedEnquiry.id}
-Name: ${selectedEnquiry.full_name}
-Phone: ${selectedEnquiry.country_code || '+91'} ${selectedEnquiry.phone}
-Email: ${selectedEnquiry.email}
-Course/Role: ${selectedEnquiry.course}
-Location: ${selectedEnquiry.city || 'N/A'}, ${selectedEnquiry.state || 'N/A'}
-Experience: ${selectedEnquiry.experience || 'N/A'}
-Mode: ${selectedEnquiry.branch || 'N/A'}
-Status: ${selectedEnquiry.status || 'Pending'}
-Date: ${formatDate(selectedEnquiry.created_at)}
-Comments: ${selectedEnquiry.comment || 'N/A'}
-                    `.trim();
-                    
-                    navigator.clipboard.writeText(enquiryText);
-                    alert('Enquiry details copied to clipboard!');
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#3498db',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  📋 Copy Details
-                </button>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this enquiry?')) {
-                      handleDelete(selectedEnquiry.id);
-                    }
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  🗑️ Delete
-                </button>
-                <button
-                  onClick={closeDetails}
-                  style={{
-                    padding: '8px 20px',
-                    backgroundColor: '#7f8c8d',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Close
-                </button>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ 
-        maxWidth: '1400px', 
-        margin: '0 auto',
-        background: 'white',
-        borderRadius: '10px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
-      }}>
+      {/* Header and Search */}
+      <div className="bg-white p-6 rounded-xl shadow mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Enquiries Dashboard</h1>
+            <p className="text-gray-600">Manage all course and job enquiries</p>
+          </div>
+          <button 
+            onClick={fetchEnquiries}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+          >
+            <span className="mr-2">↻</span> Refresh
+          </button>
+        </div>
         
-        {/* Header */}
-        <div style={{ 
-          backgroundColor: '#2c3e50',
-          padding: '25px 30px',
-          color: 'white'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '20px'
-          }}>
-            <div>
-              <h1 style={{ 
-                margin: '0 0 5px 0', 
-                fontSize: '1.8rem',
-                fontWeight: '600'
-              }}>
-                Course Enquiries Dashboard
-              </h1>
-              <p style={{ 
-                margin: '0',
-                fontSize: '1rem',
-                opacity: '0.8'
-              }}>
-                Manage training and job enquiries from the popup form
-              </p>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={fetchEnquiries}
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: '#3498db', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#2980b9'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#3498db'}
-              >
-                ↻ Refresh
-              </button>
-              <button 
-                onClick={handleLogout} 
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: '#e74c3c', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#c0392b'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#e74c3c'}
-              >
-                ⎋ Logout
-              </button>
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search by name, phone, email, course, location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              🔍
             </div>
           </div>
-        </div>
+          <button type="submit" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+            Search
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setSearchTerm(''); fetchEnquiries(); }}
+            className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Clear
+          </button>
+        </form>
+      </div>
 
-        {/* Search and Stats */}
-        <div style={{ 
-          padding: '25px 30px',
-          borderBottom: '1px solid #e9ecef'
-        }}>
-          <form onSubmit={handleSearch} style={{ marginBottom: '20px' }}>
-            <div style={{ 
-              display: 'flex', 
-              gap: '15px',
-              alignItems: 'center',
-              flexWrap: 'wrap'
-            }}>
-              <div style={{ position: 'relative', flex: '1', minWidth: '300px' }}>
-                <input
-                  type="text"
-                  placeholder="Search by name, phone, email, course, location, or status..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ 
-                    padding: '12px 45px 12px 15px',
-                    width: '100%',
-                    border: '1px solid #ddd',
-                    borderRadius: '5px',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#007bff'}
-                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
-                />
-                <div style={{
-                  position: 'absolute',
-                  right: '15px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#666',
-                  fontSize: '16px'
-                }}>
-                  🔍
-                </div>
-              </div>
-              
-              <button 
-                type="submit"
-                style={{ 
-                  padding: '12px 24px', 
-                  backgroundColor: '#28a745', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
-              >
-                Search
-              </button>
-              
-              <button 
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  fetchEnquiries();
-                }}
-                style={{ 
-                  padding: '12px 24px', 
-                  backgroundColor: '#6c757d', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
-              >
-                Clear
-              </button>
-            </div>
-          </form>
-          
-          <div style={{ 
-            display: 'flex',
-            gap: '20px',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ 
-              backgroundColor: '#f8f9fa',
-              padding: '15px 20px',
-              borderRadius: '5px',
-              fontWeight: '500',
-              color: '#495057',
-              border: '1px solid #e9ecef',
-              minWidth: '150px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '5px' }}>Total Records</div>
-              <div style={{ color: '#007bff', fontWeight: '600', fontSize: '24px' }}>{enquiries.length}</div>
-            </div>
-            
-            <div style={{ 
-              backgroundColor: '#f8f9fa',
-              padding: '15px 20px',
-              borderRadius: '5px',
-              fontWeight: '500',
-              color: '#495057',
-              border: '1px solid #e9ecef',
-              minWidth: '150px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '5px' }}>Pending</div>
-              <div style={{ color: '#ffc107', fontWeight: '600', fontSize: '24px' }}>
-                {enquiries.filter(e => e.status === 'Pending').length}
-              </div>
-            </div>
-            
-            <div style={{ 
-              backgroundColor: '#f8f9fa',
-              padding: '15px 20px',
-              borderRadius: '5px',
-              fontWeight: '500',
-              color: '#495057',
-              border: '1px solid #e9ecef',
-              minWidth: '150px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '5px' }}>Contacted</div>
-              <div style={{ color: '#6f42c1', fontWeight: '600', fontSize: '24px' }}>
-                {enquiries.filter(e => e.status === 'Contacted').length}
-              </div>
-            </div>
-            
-            <div style={{ 
-              backgroundColor: '#f8f9fa',
-              padding: '15px 20px',
-              borderRadius: '5px',
-              fontWeight: '500',
-              color: '#495057',
-              border: '1px solid #e9ecef',
-              minWidth: '150px'
-            }}>
-              <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '5px' }}>Completed</div>
-              <div style={{ color: '#28a745', fontWeight: '600', fontSize: '24px' }}>
-                {enquiries.filter(e => e.status === 'Completed').length}
-              </div>
-            </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
+          <div className="text-sm text-gray-500">Total Records</div>
+          <div className="text-2xl font-bold text-blue-600">{enquiries.length}</div>
+        </div>
+        <div className="bg-white p-5 rounded-xl shadow border-l-4 border-yellow-500">
+          <div className="text-sm text-gray-500">Pending</div>
+          <div className="text-2xl font-bold text-yellow-500">
+            {enquiries.filter(e => e.status === 'Pending').length}
           </div>
         </div>
-
-        {/* Table Container */}
-        <div style={{ padding: '0' }}>
-          {enquiries.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '50px 20px',
-              color: '#6c757d'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '15px', opacity: '0.5' }}>📊</div>
-              <h3 style={{ margin: '0 0 10px 0', color: '#495057', fontWeight: '500' }}>
-                No enquiries yet
-              </h3>
-              <p style={{ margin: '0', fontSize: '14px' }}>
-                Enquiries will appear here once submitted through the popup form
-              </p>
-            </div>
-          ) : (
-            <div style={{ 
-              overflowX: 'auto'
-            }}>
-              <table style={{ 
-                width: '100%', 
-                borderCollapse: 'collapse',
-                minWidth: '1200px'
-              }}>
-                <thead>
-                  <tr style={{ 
-                    backgroundColor: '#f8f9fa',
-                    borderBottom: '2px solid #dee2e6'
-                  }}>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'center', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>ID</th>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'left', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>Name & Contact</th>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'left', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>Course / Role</th>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'left', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>Location</th>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'center', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>Status</th>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'center', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>Date</th>
-                    <th style={{ 
-                      padding: '15px', 
-                      textAlign: 'center', 
-                      fontWeight: '600',
-                      color: '#495057',
-                      fontSize: '13px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enquiries.map((enquiry, index) => (
-                    <tr 
-                      key={enquiry.id} 
-                      style={{ 
-                        borderBottom: '1px solid #e9ecef',
-                        backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e9ecef'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f8f9fa'}
-                    >
-                      <td style={{ 
-                        padding: '15px', 
-                        textAlign: 'center',
-                        fontWeight: '600',
-                        color: '#007bff',
-                        fontSize: '14px'
-                      }}>
-                        {enquiry.id}
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <div style={{ fontWeight: '500', color: '#333', marginBottom: '5px' }}>
-                          {enquiry.full_name}
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '3px' }}>
-                          📞 {enquiry.country_code || '+91'} {enquiry.phone}
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#666' }}>
-                          ✉️ {enquiry.email}
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px', color: '#555', fontSize: '14px' }}>
-                        <div style={{ 
-                          padding: '5px 10px', 
-                          backgroundColor: '#f8f9fa', 
-                          borderRadius: '4px',
-                          marginBottom: '5px',
-                          fontWeight: '500'
-                        }}>
-                          {enquiry.course || 'N/A'}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#888' }}>
-                          {enquiry.experience || 'N/A'} • {enquiry.branch || 'N/A'}
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px', color: '#555', fontSize: '14px' }}>
-                        <div>{enquiry.city || enquiry.location || 'N/A'}</div>
-                        <div style={{ fontSize: '13px', color: '#888' }}>{enquiry.state || ''}</div>
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'center' }}>
-                        <select
-                          value={enquiry.status || 'Pending'}
-                          onChange={(e) => handleStatusChange(enquiry.id, e.target.value)}
-                          style={{
-                            padding: '6px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            backgroundColor: getStatusColor(enquiry.status),
-                            color: getStatusTextColor(enquiry.status),
-                            cursor: 'pointer',
-                            outline: 'none',
-                            minWidth: '120px'
-                          }}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Contacted">Contacted</option>
-                          <option value="Ongoing">On Going</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Not Interested">Not Interested</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
-                        {formatDate(enquiry.created_at)}
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button 
-                            onClick={() => viewEnquiryDetails(enquiry)}
-                            style={{ 
-                              padding: '6px 12px', 
-                              backgroundColor: '#3498db', 
-                              color: 'white', 
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              transition: 'background-color 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#2980b9'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#3498db'}
-                            title="View full details"
-                          >
-                            👁️ View
-                          </button>
-                          <button 
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this enquiry?')) {
-                                handleDelete(enquiry.id);
-                              }
-                            }}
-                            style={{ 
-                              padding: '6px 12px', 
-                              backgroundColor: '#dc3545', 
-                              color: 'white', 
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              transition: 'background-color 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                            onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
-                            onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
-                            title="Delete this record"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={{ 
-          backgroundColor: '#f8f9fa',
-          padding: '15px 30px',
-          borderTop: '1px solid #e9ecef',
-          textAlign: 'center',
-          color: '#6c757d',
-          fontSize: '14px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px'
-        }}>
-          <div>
-            Database: <strong>course_enquiries</strong> • Table matches your Aiven MySQL structure
+        <div className="bg-white p-5 rounded-xl shadow border-l-4 border-green-500">
+          <div className="text-sm text-gray-500">Jobs Enquiries</div>
+          <div className="text-2xl font-bold text-green-600">
+            {enquiries.filter(e => e.enquiry_type === 'IT / Non-IT Jobs').length}
           </div>
-          <div>
-            {enquiries.length} records • Last updated: {new Date().toLocaleTimeString()}
+        </div>
+        <div className="bg-white p-5 rounded-xl shadow border-l-4 border-purple-500">
+          <div className="text-sm text-gray-500">Training Enquiries</div>
+          <div className="text-2xl font-bold text-purple-600">
+            {enquiries.filter(e => e.enquiry_type === 'Courses / Internship').length}
           </div>
         </div>
       </div>
+
+      {/* Main Table */}
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        {enquiries.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="text-5xl mb-4 opacity-20">📊</div>
+            <h3 className="text-xl font-medium text-gray-700 mb-2">No enquiries found</h3>
+            <p className="text-gray-500 mb-6">
+              {searchTerm ? 'Try a different search term' : 'Submit a form through the popup to see data here'}
+            </p>
+            <button 
+              onClick={fetchEnquiries}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Check Again
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-800">All Enquiries ({enquiries.length})</h2>
+                <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleTimeString()}</span>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Name & Contact</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Enquiry For</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Course / Role</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Location</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">Assign To</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {enquiries.map((enquiry) => {
+                    const enquiryType = getEnquiryTypeDisplay(enquiry);
+                    
+                    return (
+                      <tr key={enquiry.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {enquiry.id}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium text-gray-900">{enquiry.full_name}</div>
+                          <div className="text-sm text-gray-500 flex items-center mt-1">
+                            <span className="mr-2">📞</span>
+                            {enquiry.country_code || '+91'} {enquiry.phone}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center">
+                            <span className="mr-2">✉️</span>
+                            {enquiry.email}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            enquiryType.color === 'green' ? 'bg-green-100 text-green-800' :
+                            enquiryType.color === 'blue' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {enquiryType.text}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium text-gray-900">{enquiry.course || 'N/A'}</div>
+                          {enquiry.preferred_role && (
+                            <div className="text-xs text-green-600 mt-1 flex items-center">
+                              <span className="mr-1">🎯</span>
+                              {enquiry.preferred_role}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            Exp: {enquiry.experience || 'N/A'} • Branch: {enquiry.branch || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium">{enquiry.city || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{enquiry.state || ''}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <select
+                            value={enquiry.status || 'Pending'}
+                            onChange={(e) => handleStatusChange(enquiry.id, e.target.value)}
+                            className="px-3 py-1.5 border rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                            style={{
+                              backgroundColor: getStatusColor(enquiry.status),
+                              color: getStatusTextColor(enquiry.status),
+                              borderColor: getStatusColor(enquiry.status)
+                            }}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Ongoing">On Going</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Not Interested">Not Interested</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="min-w-[140px]">
+                            <select
+                              value={enquiry.assigned_to || ''}
+                              onChange={(e) => handleEmployeeAssign(enquiry.id, e.target.value)}
+                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer w-full"
+                            >
+                              <option value="">-- Select Employee --</option>
+                              {employees.map((emp) => (
+                                <option key={emp} value={emp}>{emp}</option>
+                              ))}
+                            </select>
+                            
+                            {enquiry.assigned_to && (
+                              <div className="mt-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm flex items-center justify-between">
+                                <span className="font-medium truncate">
+                                  👤 {enquiry.assigned_to}
+                                </span>
+                                <button
+                                  onClick={() => handleEmployeeAssign(enquiry.id, '')}
+                                  className="ml-2 text-xs text-red-500 hover:text-red-700"
+                                  title="Remove assignment"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-gray-500">
+                          {formatDate(enquiry.created_at)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => viewEnquiryDetails(enquiry)}
+                              className="px-3 py-1.5 bg-blue-100 text-blue-700 text-sm rounded-lg hover:bg-blue-200 flex items-center"
+                            >
+                              <span className="mr-1">👁️</span> View
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(enquiry.id)}
+                              className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded-lg hover:bg-red-200 flex items-center"
+                            >
+                              <span className="mr-1">🗑️</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Details Modal - Shows ALL information */}
+      {selectedEnquiry && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden my-8">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-2xl font-bold">Enquiry Details</h3>
+                  <p className="text-blue-100">ID: #{selectedEnquiry.id} • Submitted: {formatDate(selectedEnquiry.created_at)}</p>
+                </div>
+                <button
+                  onClick={closeDetails}
+                  className="text-white hover:text-blue-200 text-3xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-8 overflow-y-auto max-h-[70vh]">
+              {/* Enquiry Type Badge */}
+              <div className="mb-8">
+                {getEnquiryTypeDisplay(selectedEnquiry).color === 'green' ? (
+                  <span className="px-4 py-2 bg-green-100 text-green-800 text-sm font-semibold rounded-lg border border-green-200">
+                    🏢 JOBS ENQUIRY - {selectedEnquiry.enquiry_type}
+                  </span>
+                ) : (
+                  <span className="px-4 py-2 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg border border-blue-200">
+                    🎓 TRAINING ENQUIRY - {selectedEnquiry.enquiry_type}
+                  </span>
+                )}
+              </div>
+              
+              {/* Information Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Personal Information */}
+                <div className="bg-gray-50 p-6 rounded-xl">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">👤 Personal Information</h4>
+                  <div className="space-y-4">
+                    <InfoRow label="Full Name" value={selectedEnquiry.full_name} />
+                    <InfoRow label="Phone" value={`${selectedEnquiry.country_code || '+91'} ${selectedEnquiry.phone}`} icon="📞" />
+                    <InfoRow label="Email" value={selectedEnquiry.email} icon="✉️" />
+                    {selectedEnquiry.current_employer && (
+                      <InfoRow label="Current Employer" value={selectedEnquiry.current_employer} icon="💼" />
+                    )}
+                  </div>
+                </div>
+                
+                {/* Enquiry Details */}
+                <div className="bg-gray-50 p-6 rounded-xl">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">🎯 Enquiry Details</h4>
+                  <div className="space-y-4">
+                    <InfoRow label="Course / Role" value={selectedEnquiry.course || 'N/A'} />
+                    {selectedEnquiry.preferred_role && (
+                      <InfoRow label="Preferred Role" value={selectedEnquiry.preferred_role} icon="🎯" highlight />
+                    )}
+                    <InfoRow label="Experience" value={selectedEnquiry.experience || 'N/A'} />
+                    <InfoRow label="Branch" value={selectedEnquiry.branch || 'N/A'} />
+                  </div>
+                </div>
+                
+                {/* Location */}
+                <div className="bg-gray-50 p-6 rounded-xl">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">📍 Location</h4>
+                  <div className="space-y-4">
+                    <InfoRow label="City" value={selectedEnquiry.city || selectedEnquiry.location || 'N/A'} icon="🏙️" />
+                    <InfoRow label="State/Region" value={selectedEnquiry.state || 'N/A'} />
+                  </div>
+                </div>
+                
+                {/* Status & Assignment */}
+                <div className="bg-gray-50 p-6 rounded-xl">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b">📊 Status & Assignment</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                      <select
+                        value={selectedEnquiry.status || 'Pending'}
+                        onChange={(e) => handleStatusChange(selectedEnquiry.id, e.target.value)}
+                        className="px-4 py-2 border rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                        style={{
+                          backgroundColor: getStatusColor(selectedEnquiry.status),
+                          color: getStatusTextColor(selectedEnquiry.status),
+                          borderColor: getStatusColor(selectedEnquiry.status)
+                        }}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Ongoing">On Going</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Not Interested">Not Interested</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Assign To</label>
+                      <select
+                        value={selectedEnquiry.assigned_to || ''}
+                        onChange={(e) => handleEmployeeAssign(selectedEnquiry.id, e.target.value)}
+                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                      >
+                        <option value="">-- Select Employee --</option>
+                        {employees.map((emp) => (
+                          <option key={emp} value={emp}>{emp}</option>
+                        ))}
+                      </select>
+                      {selectedEnquiry.assigned_to && (
+                        <div className="mt-2 p-3 bg-green-50 text-green-700 rounded-lg text-sm flex items-center justify-between">
+                          <div className="flex items-center">
+                            <span className="mr-2">✅</span>
+                            <div>
+                              <span className="font-semibold">Currently assigned to:</span>
+                              <div className="text-lg font-bold">{selectedEnquiry.assigned_to}</div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleEmployeeAssign(selectedEnquiry.id, '')}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <InfoRow label="Date Submitted" value={formatDate(selectedEnquiry.created_at)} icon="📅" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Comments Section */}
+              <div className="mt-8">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">💬 Comments / Notes</h4>
+                <div className="flex gap-3">
+                  <textarea
+                    value={editComment}
+                    onChange={(e) => setEditComment(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="4"
+                    placeholder="Add or update comments about this enquiry..."
+                  />
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleCommentUpdate(selectedEnquiry.id)}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium"
+                    >
+                      Update Comment
+                    </button>
+                    <button
+                      onClick={exportEnquiryDetails}
+                      className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium flex items-center justify-center"
+                    >
+                      <span className="mr-2">📥</span>
+                      Export Details
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Comments are saved and visible to all team members
+                </p>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="mt-8 pt-6 border-t flex justify-between items-center">
+                <div className="text-sm text-gray-500">
+                  Last updated: {new Date().toLocaleString()}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={closeDetails}
+                    className="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    Close
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(selectedEnquiry.id)}
+                    className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium"
+                  >
+                    🗑️ Delete Enquiry
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  ); 
+  );
+}
+
+// Helper component for info rows
+function InfoRow({ label, value, icon, highlight = false }) {
+  return (
+    <div>
+      <div className="text-sm text-gray-600 mb-1">{label}</div>
+      <div className={`flex items-center ${highlight ? 'text-green-700 font-semibold' : 'text-gray-900'}`}>
+        {icon && <span className="mr-2">{icon}</span>}
+        <span className="text-base">{value}</span>
+      </div>
+    </div>
+  );
 }
